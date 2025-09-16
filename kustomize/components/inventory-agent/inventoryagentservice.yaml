@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventoryagentservice
+spec:
+  selector:
+    matchLabels:
+      app: inventoryagentservice
+  template:
+    metadata:
+      labels:
+        app: inventoryagentservice
+    spec:
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: server
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+        image: inventoryagentservice
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: "/health"
+            port: 8080
+        livenessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: "/health"
+            port: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: GOOGLE_API_KEY
+          value: "GOOGLE_API_KEY_VAL"
+        - name: MODEL_UPDATE_INTERVAL
+          value: "24h"
+        - name: WEATHER_API_KEY
+          value: ""
+        - name: EXTERNAL_DATA_SOURCES
+          value: "weather,social,economic"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventoryagentservice
+spec:
+  type: ClusterIP
+  selector:
+    app: inventoryagentservice
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
